@@ -1,0 +1,45 @@
+name: Zero-Work Full Builder
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-2019
+    env:
+      MEGA_LINK: "https://mega.nz" # Libs from your guide
+      ENCRYPTION_KEY: "JyaWhnQ6MrvdF5h03ts_4ingrVQzBIcEV4NpU1tcUTY"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Build Tools & Megatools
+        run: |
+          choco install megatools 7zip -y
+
+      - name: Download & Extract Libraries
+        run: |
+          # Use megatools to download the file directly to the runner
+          megadl "${{ env.MEGA_LINK }}" --path .
+          
+          # Extract the 7z file using your key and move it to the /Library folder
+          mkdir Library
+          7z x *.7z -p${{ env.ENCRYPTION_KEY }} -oLibrary/ -y
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build All Targets (Xbox, Client, RCC)
+        run: |
+          # Build Windows Client
+          msbuild Roblox.sln /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:WindowsClient
+          
+          # Build Xbox Client
+          msbuild Roblox.sln /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:XboxClient
+          
+          # Build RCC Server
+          msbuild Roblox.sln /p:Configuration=ReleaseRCC /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:RCCService
+
+      - name: Upload Everything
+        uses: actions/upload-artifact@v4
+        with:
+          name: Roblox-2016-Full-Suite
+          path: bin/
