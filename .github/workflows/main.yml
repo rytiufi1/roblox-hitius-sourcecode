@@ -11,7 +11,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Build Tools & Dependencies
+            - name: Install Build Tools & Dependencies
         run: |
           # Only install what's missing. VS2015 tools are usually part of the VS2019/2022 workload.
           choco install megatools 7zip -y
@@ -22,10 +22,18 @@ jobs:
         shell: pwsh
 
       - name: Download & Extract Libraries
+        shell: pwsh
         run: |
-          megadl "${{ env.MEGA_LINK }}" --path .
-          mkdir Library
+          # Use the absolute path to megadl.exe
+          $megaPath = "C:\ProgramData\chocolatey\lib\megatools\tools\megadl.exe"
+          
+          # Run the download
+          & $megaPath "${{ env.MEGA_LINK }}" --path .
+          
+          # Create Library folder and extract
+          mkdir Library -Force
           7z x *.7z -p${{ env.ENCRYPTION_KEY }} -oLibrary/ -y
+
 
       - name: Fix Script Paths Automatically
         shell: pwsh
