@@ -13,8 +13,13 @@ jobs:
 
       - name: Install Build Tools & Dependencies
         run: |
-          # Installs both VS2017 (v141) and VS2015 (v140) toolsets + Megatools
-          choco install visualstudio2017-workload-vctools visualstudio2015buildtools megatools 7zip -y
+          # Only install what's missing. VS2015 tools are usually part of the VS2019/2022 workload.
+          choco install megatools 7zip -y
+          
+          # This is the "official" way to add the VS2017/2015 toolsets to the GitHub Runner
+          dotnet build-server shutdown
+          & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" --add Microsoft.VisualStudio.Component.VC.v141 --add Microsoft.VisualStudio.Component.VC.140 --quiet --norestart
+        shell: pwsh
 
       - name: Download & Extract Libraries
         run: |
@@ -64,3 +69,4 @@ jobs:
         with:
           name: Roblox-2016-Full-Suite
           path: bin/
+
