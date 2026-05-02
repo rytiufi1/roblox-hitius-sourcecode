@@ -11,28 +11,45 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Build Tools
-        # Combined these to speed up the setup phase
+      - name: Install Build Tools & Dependencies
         run: |
-          choco install visualstudio2017-workload-vctools megatools 7zip -y
+          # Install VS2017 (v141) and VS2015 (v140) build tools + Megatools
+          choco install visualstudio2017-workload-vctools visualstudio2015buildtools megatools 7zip -y
 
       - name: Download & Extract Libraries
         run: |
           megadl "${{ env.MEGA_LINK }}" --path .
           mkdir Library
-          # Ensure the file actually downloaded before extracting
           7z x *.7z -p${{ env.ENCRYPTION_KEY }} -oLibrary/ -y
+
+      - name: Build Boost
+        shell: cmd
+        run: |
+          cd Library/boost
+          call bootstrap.bat
+          # Note: You may need to ensure build_boost.bat uses relative paths
+          call build_boost.bat
+
+      - name: Configure & Build Qt (VS2015)
+        shell: cmd
+        run: |
+          # Use the VS2015 toolset for Qt as specified in your guide
+          call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
+          cd Library\Qt
+          configure -make nmake -platform win32-msvc2015 -opensource -confirm-license -opengl desktop -nomake examples -nomake tests -webkit -xmlpatterns
+          nmake
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
 
-      - name: Build All Targets (Xbox, Client, RCC)
+      - name: Build Roblox Solution
         run: |
-          msbuild Roblox.sln /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:WindowsClient
-          msbuild Roblox.sln /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:XboxClient
-          msbuild Roblox.sln /p:Configuration=ReleaseRCC /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:RCCService
+          # Building with VS2019/VS2022 runner but targeting v141 toolset
+          msbuild Roblox.sln /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v141 /t:WindowsClient
+          msbuild Roblox.sln /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v141 /t:XboxClient
+          msbuild Roblox.sln /p:Configuration=ReleaseRCC /p:Platform=x86 /p:PlatformToolset=v141 /t:RCCService
 
-      - name: Upload Everything
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Roblox-2016-Full-Suite
