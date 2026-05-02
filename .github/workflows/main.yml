@@ -3,25 +3,24 @@ on: [push]
 
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-latest
     env:
-      MEGA_LINK: "https://mega.nz/file/eyQyWaiL" # Libs from your guide
+      MEGA_LINK: "https://mega.nz/file/eyQyWaiL"
       ENCRYPTION_KEY: "JyaWhnQ6MrvdF5h03ts_4ingrVQzBIcEV4NpU1tcUTY"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Build Tools & Megatools
+      - name: Install Build Tools
+        # Combined these to speed up the setup phase
         run: |
-          choco install megatools 7zip -y
+          choco install visualstudio2017-workload-vctools megatools 7zip -y
 
       - name: Download & Extract Libraries
         run: |
-          # Use megatools to download the file directly to the runner
           megadl "${{ env.MEGA_LINK }}" --path .
-          
-          # Extract the 7z file using your key and move it to the /Library folder
           mkdir Library
+          # Ensure the file actually downloaded before extracting
           7z x *.7z -p${{ env.ENCRYPTION_KEY }} -oLibrary/ -y
 
       - name: Add MSBuild to PATH
@@ -29,13 +28,8 @@ jobs:
 
       - name: Build All Targets (Xbox, Client, RCC)
         run: |
-          # Build Windows Client
           msbuild Roblox.sln /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:WindowsClient
-          
-          # Build Xbox Client
           msbuild Roblox.sln /p:Configuration=Release /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:XboxClient
-          
-          # Build RCC Server
           msbuild Roblox.sln /p:Configuration=ReleaseRCC /p:Platform=x86 /p:PlatformToolset=v141 /p:TreatWarningsAsError=false /t:RCCService
 
       - name: Upload Everything
